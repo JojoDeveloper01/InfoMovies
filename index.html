@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Busca de Filmes</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+      background-color: #121212;
+      color: #ffffff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 80%;
+      padding: 20px;
+      background-color: #1f1f1f;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      font-size: 2rem;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      outline: none;
+      margin-bottom: 10px;
+    }
+
+    .results {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-evenly;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .movie-card {
+      background-color: #252525;
+      padding: 10px;
+      border-radius: 10px;
+      text-align: center;
+      width: 12rem;
+      height: 20rem;
+    }
+
+    .movie-card img {
+      width: 150px;
+      height: auto;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+
+    .movie-card img:hover {
+      transform: scale(1.1);
+    }
+
+    .details {
+      flex: 1;
+      display: none;
+      height: fit-content;
+      margin-top: 20px;
+      padding: 20px;
+      background-color: #252525;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+      text-align: left;
+    }
+
+    .block {
+      display: block;
+    }
+
+    .load-more {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #e50914;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .load-more:hover {
+      background-color: #b20710;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div style="display: flex; flex-direction: column;padding-left: 2rem;">
+      <h1 style="text-align: start;">Busca de Filmes</h1>
+      <input type="text" id="search" placeholder="Digite o nome do filme" oninput="debounceSearch()">
+    </div>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+      <div style="flex:1; margin-inline: 2rem;">
+        <div id="results" class="results"></div>
+        <button id="loadMore" class="load-more" onclick="loadMoreMovies()" style="display: none">Carregar Mais</button>
+      </div>
+      <div id="details" class="details"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_KEY = '7dea70b72a8df2c48d63f1c97d2dec1e';
+    const API_URL = 'https://api.themoviedb.org/3/search/movie';
+    const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w200';
+    let debounceTimer;
+    let moviesList = [];
+    let moviesShown = 0;
+    const MOVIES_PER_LOAD = 5;
+
+
+    function debounceSearch() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(searchMovies, 100);
+    }
+
+    function searchMovies() {
+      const query = document.getElementById('search').value.trim();
+      if (!query) return;
+
+      fetch(`${API_URL}?api_key=${API_KEY}&query=${encodeURIComponent(query)}&language=pt-BR`)
+        .then(response => response.json())
+        .then(data => {
+          moviesList = data.results || [];
+          moviesShown = 0;
+          displayResults();
+        })
+        .catch(error => console.error('Erro ao buscar filmes:', error));
+    }
+
+    function displayResults() {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '';
+
+      if (moviesList.length === 0) {
+        resultsDiv.innerHTML = '<p>Nenhum filme encontrado.</p>';
+        return;
+      }
+
+      const moviesToShow = moviesList.slice(0, moviesShown + MOVIES_PER_LOAD);
+      moviesToShow.forEach(movie => {
+        const movieCard = document.createElement('div');
+        movieCard.className = 'movie-card';
+
+        const img = document.createElement('img');
+        img.src = movie.poster_path ? IMAGE_BASE_URL + movie.poster_path : 'https://via.placeholder.com/150/000000/FFFFFF?text=Sem+Imagem';
+        img.alt = movie.title;
+        img.onclick = () => showDetails(movie);
+
+        const title = document.createElement('p');
+        title.textContent = movie.title;
+
+        movieCard.appendChild(img);
+        movieCard.appendChild(title);
+        resultsDiv.appendChild(movieCard);
+      });
+
+      moviesShown += MOVIES_PER_LOAD;
+      document.getElementById('loadMore').style.display = moviesShown < moviesList.length ? 'block' : 'none';
+    }
+
+    function loadMoreMovies() {
+      displayResults();
+    }
+
+    function showDetails(movie) {
+      const detailsDiv = document.getElementById('details');
+      detailsDiv.classList.add("block");
+
+      detailsDiv.innerHTML = `
+        <h2>${movie.title}</h2>
+        <p><strong>Resumo:</strong> ${movie.overview || 'Descrição não disponível.'}</p>
+        <p><strong>Data de lançamento:</strong> ${movie.release_date || 'Desconhecida'}</p>
+        <p><strong>Avaliação:</strong> ${movie.vote_average ? movie.vote_average + '/10' : 'Sem nota'}</p>
+        <p><strong>Idioma original:</strong> ${movie.original_language ? movie.original_language.toUpperCase() : 'Desconhecido'}</p>
+        <p><strong>Popularidade:</strong> ${movie.popularity || 'Sem dados'}</p>
+        <p><strong>Para adultos?</strong> ${movie.adult ? 'Sim' : 'Não'}</p>
+        <img src="${movie.backdrop_path ? 'https://image.tmdb.org/t/p/w500' + movie.backdrop_path : 'https://via.placeholder.com/500/000000/FFFFFF?text=Sem+Imagem'}"
+             alt="${movie.title}" style="width: 100%; border-radius: 10px; margin-top: 10px;">
+    `;
+    }
+  </script>
+</body>
+
+</html>
